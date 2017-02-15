@@ -1,0 +1,25 @@
+1、处理Hero 
+   function duang(){
+    //改this.down
+    //改成爆破图像
+   }
+
+2、处理Hero
+   function step(){
+	if(this.down){
+	 //显示爆破
+	 //爆破过程完成后，canDelete=true
+	}else{
+		//显示正常
+	}
+   }
+3、function deleteComponent(){
+    if(判断hero.canDelete){
+	life --;
+	if(life == 0){
+	 GAME OVER
+	}else{
+		hero = new Hero();
+	}
+    }
+}

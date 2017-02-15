@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>飞机大战</title>
+</head>
+<body style="margin:0;padding:0;position:relative">
+    <canvas id="bg" style="position:absolute;"></canvas>
+    <canvas id="canvas" style="position:absolute;"></canvas>
+</body>
+<script>
+    var bg=document.getElementById("bg");
+    var canvas=document.getElementById("canvas");
+    var bgc=bg.getContext("2d");
+    var c=canvas.getContext("2d");
+
+    //画布定位
+    var width=canvas.width;
+    var height=canvas.height;
+    var startImg=new Image();
+    startImg.src="img/shoot_copyright.png";
+    var startBtn=new Image();
+    startBtn.src="img/game_start_nor.png";
+    resize();
+    window.addEventListener("resize",resize,false);
+
+    var background=new Image();
+    background.src="img/background.png";
+    var pauseBtn=new Image();
+    pauseBtn.src="img/game_pause_nor.png";
+    var startingImg=new Image();
+    var startingImgSrc=["img/game_loading1.png","img/game_loading2.png","img/game_loading3.png"];
+    var score={
+        name:"SCORE",
+        value:"0"
+    };
+
+    var enemies=[];
+    enemies[0]=new Image();
+    enemies[1]=new Image();
+    enemies[2]=new Image();
+    var enemy1_down=[];
+    var enemy2_down=[];
+    var enemy3_down=[];
+    for(var i=0;i<6;i++){
+        if(i<4){
+            enemy1_down[i]=new Image();
+            enemy1_down[i].src="img/enemy1_down"+(i+1)+".png";
+            enemy2_down[i]=new Image();
+            enemy2_down[i].src="img/enemy2_down"+(i+1)+".png";
+        }
+        enemy3_down[i]=new Image();
+        enemy3_down[i].src="img/enemy3_down"+(i+1)+".png";
+    }
+    var enemiesSrc=["img/enemy1.png","img/enemy2.png","img/enemy3_n1.png","img/enemy3_n2.png"];
+    var flag=1;
+    var flag1=1;
+    enemies[0].src=enemiesSrc[0];
+    enemies[1].src=enemiesSrc[1];
+    var enemy3=[new Image(),new Image()];
+    enemy3[0].src=enemiesSrc[2];
+    enemy3[1].src=enemiesSrc[3];
+    setInterval(function(){
+        enemies[2]=(flag==1)?enemy3[0]:enemy3[1];
+        flag=-flag;
+    },20);
+    var hero={
+        body:new Image(),
+        life:"3",
+        x:0,
+        y:0,
+        width:width*99/480,
+        height:width*124/480,
+        bullet:{
+            x:0,
+            y:0,
+            width:width*9/480,
+            height:width*21/480,
+            name:new Image()
+        }
+    };
+    var heroSrc=[new Image(),new Image()];
+    heroSrc[0].src="img/hero1.png";
+    heroSrc[1].src="img/hero2.png";
+    setInterval(function () {
+        if(hero) hero.body = (flag1 == 1) ? heroSrc[0] : heroSrc[1];
+        flag1 = -flag1;
+    }, 20);
+    hero.bullet.name.src = "img/bullet1.png";
+    var hero_down=[new Image(),new Image(),new Image(),new Image()];
+    hero_down[0].src="img/hero_blowup_n1.png";
+    hero_down[1].src="img/hero_blowup_n2.png";
+    hero_down[2].src="img/hero_blowup_n3.png";
+    hero_down[3].src="img/hero_blowup_n4.png";
+    var speed=30;
+    var bullets=[];
+    var enemies1=[];
+    var enemies2=[];
+    var enemies3=[];
+
+    //canvas界面设计
+    var bgTimer;
+    background.onload=function(){
+        var i=0;
+        bgTimer=setInterval(function(){
+            //背景动画
+            bgc.drawImage(background,0,i,width,width*852/480);
+            bgc.drawImage(background,0,i-width*852/480,width,width*852/480);
+            if(i<width*852/480){
+                i++;
+            }else{
+                i=0;
+            }
+        },speed);
+    };
+    startImg.onload=function(){
+        c.drawImage(startImg,width *0.2,(height-width*0.6*225/441)/3,width*0.6,width*0.6*225/441);
+    };
+    startBtn.onload=function(){
+        c.drawImage(startBtn,width *0.425,(height-width*0.6*225/441)*2/3,width*0.15,width*0.15*45/60);
+    };
+
+    var bulletSpeed=8;
+    var enemySpeed=[50,100,1000];
+
+    //start
+    var flag2=-1;
+    canvas.onclick=function(e){
+        var x= e.offsetX;
+        var y= e.offsetY;
+        var reg=/img\/game_start_nor.png$/;
+        if(reg.test(startBtn.src)&&x>=width *0.425&&x<=width*0.575&&y>=(height-width*0.6*225/441)*2/3&&y<=((height-width*0.6*225/441)*2/3+width*0.15*45/60)) {
+            startBtn.src = "img/game_start_pressed.png";
+            c.drawImage(startBtn, width * 0.425, (height - width * 0.6 * 225 / 441) * 2 / 3, width * 0.15, width * 0.15 * 45 / 60);
+            var ey1=2;
+            var ey2=1.5;
+            var ey3=0.5;
+            var by=10;
+            startBtn.onload=function(){
+                var count=0;
+                var timer=setInterval(function(){
+                    if(count<=5){
+                        startingImg.src=startingImgSrc[parseInt(count/2)];
+                        c.drawImage(startingImg,0,height-width*0.5*38/186,width*0.5,width*0.5*38/186);
+                    }else{
+                        c.clearRect(0, 0, width, height);
+
+                        //enemies
+                        enemies1.push(drawEnemy1(Math.random()*(width+width*57/480)-width*57/480/2,-width*51/480));
+                        enemies2.push(drawEnemy2(Math.random()*(width+width*69/480)-width*69/480/2,-width*95/480));
+                        enemies3.push(drawEnemy3(Math.random()*(width+width*169/480)-width*169/480/2,-width*258/480));
+                        var count1=enemies1.length>enemies2.length?enemies1.length:enemies2.length;
+                        count1=count1>enemies3.length?count1:enemies3.length;
+                        for(var i=0;i<count1;i+=enemySpeed[0]){
+                            if(enemies1[i]){
+                                if(enemies1[i].y<=height){
+                                    drawEnemy1(enemies1[i].x,enemies1[i].y);
+                                    enemies1[i].y=enemies1[i].y+ey1;
+                                }else{
+                                    enemies1.splice(0,enemySpeed[0]);
+                                }
+                            }
+                            if(i%100==0&&enemies2[i]){
+                                if(enemies2[i].y<=height){
+                                    drawEnemy2(enemies2[i].x,enemies2[i].y);
+                                    enemies2[i].y=enemies2[i].y+ey2;
+                                }else{
+                                    enemies2.splice(0,enemySpeed[1]);
+                                }
+                            }
+                            if(i%enemySpeed[2]==0&&enemies3[i]){
+                                if(enemies3[i].y<=height){
+                                    drawEnemy3(enemies3[i].x,enemies3[i].y);
+                                    enemies3[i].y=enemies3[i].y+ey3;
+                                }else{
+                                    enemies3.splice(0,enemySpeed[2]);
+                                }
+                            }
+                        }
+                        //子弹
+                        if(flag2==1&&hero){
+                            bullets.push(drawBullet(hero.x+width*99/480/2-width*9/480/3,hero.y));
+                        }
+                        for(var i=0;i<bullets.length;i+=bulletSpeed){
+                            if(bullets[i].y>=-width*21/480){
+                                drawBullet(bullets[i].x,bullets[i].y);
+                                bullets[i].y=bullets[i].y-by;
+                            }else{
+                                bullets.splice(0,bulletSpeed);
+                            }
+                        }
+                        //子弹击中
+                        for(var j=0;j<bullets.length;j+=bulletSpeed){
+                            for(var i=0;i<count1;i+=enemySpeed[0]){
+                                if(enemies1[i]){
+                                    if((enemies1[i].x+enemies1[i].width)>bullets[j].x && enemies1[i].x<(bullets[j].x+bullets[j].width)
+                                            && (enemies1[i].y+enemies1[i].height)>bullets[j].y && enemies1[i].y<(bullets[j].y+bullets[j].height)){
+                                        enemies1[i].life-=1;
+                                        bullets.splice(j,bulletSpeed);
+                                        if(enemies1[i].life<=0){
+                                            Down(1,enemies1[i].x,enemies1[i].y,enemies1[i].width,enemies1[i].height);
+                                            enemies1.splice(i,enemySpeed[0]);
+                                            score.value=parseInt(score.value)+1+"";
+                                        }
+                                        break;
+                                    }
+                                }
+                                if(i%enemySpeed[1]==0&&enemies2[i]){
+                                    if((enemies2[i].x+enemies2[i].width)>bullets[j].x && enemies2[i].x<(bullets[j].x+bullets[j].width)
+                                            && (enemies2[i].y+enemies2[i].height)>bullets[j].y && enemies2[i].y<(bullets[j].y+bullets[j].height)){
+                                        enemies2[i].life-=1;
+                                        bullets.splice(j,bulletSpeed);
+                                        if(enemies2[i].life<=0){
+                                            Down(2,enemies2[i].x,enemies2[i].y,enemies2[i].width,enemies2[i].height);
+                                            enemies2.splice(i,enemySpeed[1]);
+                                            score.value=parseInt(score.value)+6+"";
+                                        }
+                                        break;
+                                    }
+                                }
+                                if(i%enemySpeed[2]==0&&enemies3[i]){
+                                    if((enemies3[i].x+enemies3[i].width)>bullets[j].x && enemies3[i].x<(bullets[j].x+bullets[j].width)
+                                            && (enemies3[i].y+enemies3[i].height)>bullets[j].y && enemies3[i].y<(bullets[j].y+bullets[j].height)){
+                                        enemies3[i].life-=1;
+                                        bullets.splice(j,bulletSpeed);
+                                        if(enemies3[i].life<=0){
+                                            Down(3,enemies3[i].x,enemies3[i].y,enemies3[i].width,enemies3[i].height);
+                                            enemies3.splice(i,enemySpeed[2]);
+                                            score.value=parseInt(score.value)+15+"";
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        //英雄
+                        if(hero){
+                            c.drawImage(hero.body,hero.x,hero.y,hero.width,hero.height);
+                            //英雄碰撞生命减少
+                            for(var i=0;i<count1;i+=enemySpeed[0]){
+                                if(enemies1[i]){
+                                    if((enemies1[i].x+enemies1[i].width)>hero.x && enemies1[i].x<(hero.x+hero.width)
+                                            && (enemies1[i].y+enemies1[i].height)>hero.y && enemies1[i].y<(hero.y+hero.height)){
+                                        enemies1[i].life=0;
+                                        hero.life-=1;
+                                        if(enemies1[i].life<=0){
+                                            Down(1,enemies1[i].x,enemies1[i].y,enemies1[i].width,enemies1[i].height);
+                                            enemies1.splice(i,enemySpeed[0]);
+                                            score.value=parseInt(score.value)+1+"";
+                                        }
+                                        if(hero.life<=0){
+                                            Down(0,hero.x,hero.y,hero.width,hero.height);
+                                            hero=null;
+                                            setTimeout(function(){
+                                                clearInterval(timer);
+                                                clearInterval(bgTimer);
+                                                drawEnding();
+                                            },speed*20);
+                                        }
+                                        break;
+                                    }
+                                }
+                                if(i%enemySpeed[1]==0&&enemies2[i]){
+                                    if((enemies2[i].x+enemies2[i].width)>hero.x && enemies2[i].x<(hero.x+hero.width)
+                                            && (enemies2[i].y+enemies2[i].height)>hero.y && enemies2[i].y<(hero.y+hero.height)){
+                                        enemies2[i].life=0;
+                                        hero.life-=1;
+                                        if(enemies2[i].life<=0){
+                                            Down(2,enemies2[i].x,enemies2[i].y,enemies2[i].width,enemies2[i].height);
+                                            enemies2.splice(i,enemySpeed[1]);
+                                            score.value=parseInt(score.value)+6+"";
+                                        }
+                                        if(hero.life<=0){
+                                            Down(0,hero.x,hero.y,hero.width,hero.height);
+                                            hero=null;
+                                            drawEnding();
+                                            setTimeout(function(){
+                                                clearInterval(timer);
+                                                clearInterval(bgTimer);
+                                                drawEnding();
+                                            },speed*20);
+                                        }
+                                        break;
+                                    }
+                                }
+                                if(i%enemySpeed[2]==0&&enemies3[i]){
+                                    if((enemies3[i].x+enemies3[i].width)>hero.x && enemies3[i].x<(hero.x+hero.width)
+                                            && (enemies3[i].y+enemies3[i].height)>hero.y && enemies3[i].y<(hero.y+hero.height)){
+                                        enemies3[i].life=0;
+                                        hero.life-=1;
+                                        if(enemies3[i].life<=0){
+                                            Down(3,enemies3[i].x,enemies3[i].y,enemies3[i].width,enemies3[i].height);
+                                            enemies3.splice(i,enemySpeed[2]);
+                                            score.value=parseInt(score.value)+15+"";
+                                        }
+                                        if(hero.life<=0){
+                                            Down(0,hero.x,hero.y,hero.width,hero.height);
+                                            hero=null;
+                                            setTimeout(function(){
+                                                clearInterval(timer);
+                                                clearInterval(bgTimer);
+                                                drawEnding();
+                                            },speed*20);
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        //计分&声明
+                        c.fillStyle="rgba(0,0,0,0.4)";
+                        c.font="20px arial";
+                        c.fillText(score.name,15,32);
+                        c.fillText("LIFE",width-85,32);
+                        c.fillStyle="rgba(0,0,0,0.6)";
+                        c.fillText(score.value,100,32);
+                        var life=hero?hero.life:"0";
+                        c.fillText(life,width-30,32);
+                    }
+                    count++;
+                },speed)
+            }
+        }
+    };
+
+    canvas.onmousemove=function(e){
+        var x= e.offsetX;
+        var y= e.offsetY;
+        if(hero){
+            hero.x=x-width*99/480/2;
+            hero.y=y-width*124/480/2;
+        }
+    };
+
+    canvas.onmousedown=function(){
+        flag2=1;
+
+    };
+
+    canvas.onmouseup=function(){
+        flag2=-1;
+    };
+
+
+    function resize(){
+        bg.height=window.innerHeight;
+        bg.width=window.innerHeight*9/16;
+        canvas.height=window.innerHeight;
+        canvas.width=window.innerHeight*9/16;
+        bg.style.left=(window.innerWidth-bg.width)/2+"px";
+        canvas.style.left=(window.innerWidth-canvas.width)/2+"px";
+        width=canvas.width;
+        height=canvas.height;
+        c.fillStyle="rgba(0,0,0,0.2)";
+        c.fillRect(0,0,width,height);
+        c.drawImage(startImg,width *0.2,(height-width*0.6*225/441)/3,width*0.6,width*0.6*225/441);
+        c.drawImage(startBtn,width *0.425,(height-width*0.6*225/441)*2/3,width*0.15,width*0.15*45/60);
+    }
+
+    function drawEnemy1(x,y){
+        c.drawImage(enemies[0],x,y,width*57/480,width*51/480);
+        return {
+            name:enemies[0],
+            x:x,
+            y:y,
+            life:1,
+            width:width*57/480,
+            height:width*51/480
+        }
+    }
+
+    function drawEnemy2(x,y){
+        c.drawImage(enemies[1],x,y,width*69/480,width*95/480);
+        return {
+            name:enemies[1],
+            x:x,
+            y:y,
+            life:6,
+            width:width*69/480,
+            height:width*95/480
+        }
+    }
+
+    function drawEnemy3(x,y){
+        c.drawImage(enemies[2],x,y,width*169/480,width*258/480);
+        return {
+            name:enemies[2],
+            x:x,
+            y:y,
+            life:15,
+            width:width*169/480,
+            height:width*258/480
+        }
+    }
+
+    function drawBullet(x,y){
+        if(hero){
+            c.drawImage(hero.bullet.name,x,y,hero.bullet.width,hero.bullet.height);
+            return {
+                name:hero.bullet.name,
+                x:x,
+                y:y,
+                width:hero.bullet.width,
+                height:hero.bullet.height
+            }
+        }
+    }
+    function Down(n,x,y,width,height){
+        var i=0;
+        var timer;
+        if(n==0){
+            timer=setInterval(function(){
+                if(i<2){
+                    c.drawImage(hero_down[0],x,y,width,height);
+                }else if(i<4){
+                    c.drawImage(hero_down[1],x,y,width,height);
+                }else if(i<6){
+                    c.drawImage(hero_down[2],x,y,width,height);
+                }else if(i<8){
+                    c.drawImage(hero_down[3],x,y,width,height);
+                }else{
+                    clearInterval(timer);
+                }
+                i++;
+            },speed);
+        }else if(n==1){
+            timer=setInterval(function(){
+                if(i<1){
+                    c.drawImage(enemy1_down[0],x,y,width,height);
+                }else if(i<2){
+                    c.drawImage(enemy1_down[1],x,y,width,height);
+                }else if(i<3){
+                    c.drawImage(enemy1_down[2],x,y,width,height);
+                }else if(i<4){
+                    c.drawImage(enemy1_down[3],x,y,width,height);
+                }else{
+                    clearInterval(timer);
+                }
+                i++;
+            },speed);
+        }else if(n==2){
+            timer=setInterval(function(){
+                if(i<4){
+                    c.drawImage(enemy2_down[0],x,y,width,height);
+                }else if(i<8){
+                    c.drawImage(enemy2_down[1],x,y,width,height);
+                }else if(i<12){
+                    c.drawImage(enemy2_down[2],x,y,width,height);
+                }else if(i<16){
+                    c.drawImage(enemy2_down[3],x,y,width,height);
+                }else{
+                    clearInterval(timer);
+                }
+                i++;
+            },speed);
+        }else if(n==3){
+            timer=setInterval(function(){
+                if(i<3){
+                    c.drawImage(enemy3_down[0],x,y,width,height);
+                }else if(i<6){
+                    c.drawImage(enemy3_down[1],x,y,width,height);
+                }else if(i<9){
+                    c.drawImage(enemy3_down[2],x,y,width,height);
+                }else if(i<12){
+                    c.drawImage(enemy3_down[3],x,y,width,height);
+                }else if(i<15){
+                    c.drawImage(enemy3_down[4],x,y,width,height);
+                }else if(i<18){
+                    c.drawImage(enemy3_down[5],x,y,width,height);
+                }else{
+                    clearInterval(timer);
+                }
+                i++;
+            },speed);
+        }
+    }
+    function drawEnding(){
+        c.fillStyle="rgba(255,255,255,0.5)";
+        c.fillRect(0,0,width,height);
+        c.fillStyle="rgba(0,0,0,0.7)";
+        c.font="36px arial";
+        c.textAlign="center";
+        c.fillText("GAME OVER",width/2,height/2);
+    }
+</script>
+</html>
